@@ -1,7 +1,7 @@
 FROM golang:bookworm AS base
 
 WORKDIR /go/src/app
-COPY . .
+COPY ./app .
 
 RUN go mod download
 RUN go vet -v
