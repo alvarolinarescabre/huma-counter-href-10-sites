@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -12,16 +13,13 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
-	"github.com/danielgtaylor/huma/v2/humacli"
 	"github.com/go-chi/chi/v5"
+
+	cache "github.com/victorspringer/http-cache"
+	"github.com/victorspringer/http-cache/adapter/memory"
 
 	_ "github.com/danielgtaylor/huma/v2/formats/cbor"
 )
-
-// Options for the CLI.
-type Options struct {
-	Port int `help:"Port to listen on" short:"p" default:"8888"`
-}
 
 // Health represents the response of the "get health" operation.
 type HealthOutput struct {
@@ -248,41 +246,69 @@ func getLink(api huma.API) {
 	})
 }
 
+// Create a new router & API
 func main() {
-	// Define the options for the CLI
-	cli := humacli.New(func(hooks humacli.Hooks, options *Options) {
-		// Create a new router & API
-		router := chi.NewMux()
-		api := humachi.New(router, huma.DefaultConfig("Get links to 'https' and 'http' from 10 sites.", "1.0.0"))
+	// Create a new router & API
+	router := chi.NewMux()
+	api := humachi.New(router, huma.DefaultConfig("Get links to 'https' and 'http' from 10 sites.", "1.0.0"))
 
-		wg := sync.WaitGroup{}
-		wg.Add(3)
-		// Call functions
-		go func() {
-			defer wg.Done()
-			getHealthCheck(api)
-		}()
+	// Create a new cache
+	var cacheClient *cache.Client
 
-		go func() {
-			defer wg.Done()
-			go getLink(api)
+	// Initialize the cache
+	// This function will create a new cache client using the memory adapter
+	// and set the default TTL to 10 minutes.
+	// It will also set the refresh key to "opn".
+	// The cache will use the LRU algorithm and a capacity of 10MB.
+	memcached, err := memory.NewAdapter(
+		memory.AdapterWithAlgorithm(memory.LRU),
+		memory.AdapterWithCapacity(10000000),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		}()
+	cacheClient, err = cache.NewClient(
+		cache.ClientWithAdapter(memcached),
+		cache.ClientWithTTL(10*time.Minute),
+		cache.ClientWithRefreshKey("opn"),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		go func() {
-			defer wg.Done()
-			go getLinks(api)
+	// Create a new cache handler
+	handler := http.HandlerFunc(http.DefaultServeMux.ServeHTTP)
 
-		}()
+	// Set the cache handler
+	cacheHandler := cacheClient.Middleware(handler)
 
-		wg.Wait()
+	// Create a new router
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	// Call functions
+	go func() {
+		defer wg.Done()
+		getHealthCheck(api)
+	}()
 
-		// Tell the CLI how to start your server.
-		hooks.OnStart(func() {
-			fmt.Printf("Starting server on port %d...\n", options.Port)
-			http.ListenAndServe(fmt.Sprintf(":%d", options.Port), router)
-		})
-	})
+	go func() {
+		defer wg.Done()
+		go getLink(api)
 
-	cli.Run()
+	}()
+
+	go func() {
+		defer wg.Done()
+		go getLinks(api)
+
+	}()
+
+	wg.Wait()
+
+	fmt.Printf("Starting server on port 8888\n")
+
+	http.Handle("/v1/links", cacheHandler)
+	http.Handle("/v1/link/{id}", cacheHandler)
+	http.ListenAndServe(":8888", router)
 }
