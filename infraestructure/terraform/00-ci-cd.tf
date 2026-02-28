@@ -74,27 +74,7 @@ resource "aws_codestarconnections_connection" "github" {
 # SSM Parameter - GitHub Token
 ################################################################################
 
-resource "time_sleep" "wait_for_iam_ssm" {
-  # depends_on eliminado porque aws_iam_role_policy.codebuild ya no existe
-  create_duration = "15s"
-}
-
-resource "aws_ssm_parameter" "github_token" {
-  name        = "/${local.name}/github-token"
-  description = "GitHub Personal Access Token for updating ArgoCD manifests"
-  type        = "SecureString"
-  value       = var.github_token != "" ? var.github_token : "PLACEHOLDER"
-
-  lifecycle {
-    ignore_changes = [value]
-  }
-
-  tags = {
-    Project = local.name
-  }
-
-  depends_on = [time_sleep.wait_for_iam_ssm]
-}
+/* Removed SSM github_token parameter — repository is public and no token is required */
 
 ################################################################################
 # IAM Role - CodeBuild App (Docker Build)
@@ -182,15 +162,7 @@ resource "aws_iam_role_policy" "codebuild_app" {
         ]
         Resource = aws_codestarconnections_connection.github.arn
       },
-      {
-        Sid    = "SSM"
-        Effect = "Allow"
-        Action = [
-          "ssm:GetParameter",
-          "ssm:GetParameters"
-        ]
-        Resource = aws_ssm_parameter.github_token.arn
-      }
+      # SSM access removed (no GITHUB token required for public repo)
     ]
   })
 }
@@ -226,11 +198,7 @@ resource "aws_codebuild_project" "app_build" {
       name  = "APP_GITHUB_REPO"
       value = var.app_github_repo
     }
-    environment_variable {
-      name  = "GITHUB_TOKEN"
-      type  = "PARAMETER_STORE"
-      value = aws_ssm_parameter.github_token.name
-    }
+    # No GITHUB_TOKEN environment variable — repo is public
   }
 
   artifacts {
@@ -276,11 +244,7 @@ resource "aws_codebuild_project" "app_deploy" {
       name  = "ARGOCD_PUSH_BRANCH"
       value = var.github_branch
     }
-    environment_variable {
-      name  = "GITHUB_TOKEN"
-      type  = "PARAMETER_STORE"
-      value = aws_ssm_parameter.github_token.name
-    }
+    # No GITHUB_TOKEN environment variable — repo is public
   }
 
   artifacts {

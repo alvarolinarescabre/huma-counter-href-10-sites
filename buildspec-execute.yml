@@ -39,21 +39,13 @@ phases:
         echo "IMAGE_NAME=$IMAGE_NAME IMAGE_TAG=$IMAGE_TAG"
 
         echo "Cloning app repo: $APP_GITHUB_REPO"
-        if [ -n "${GITHUB_TOKEN:-}" ]; then
-          git clone "https://$GITHUB_TOKEN@github.com/$APP_GITHUB_REPO.git" app_src
-        else
-          git clone "https://github.com/$APP_GITHUB_REPO.git" app_src
-        fi
+         git clone "https://github.com/$APP_GITHUB_REPO.git" app_src
         if [ -n "$IMAGE_TAG" ] && [ "$IMAGE_TAG" != "latest" ]; then
           (cd app_src && git checkout "$IMAGE_TAG" || true)
         fi
 
         echo "Cloning ArgoCD manifests repo: $ARGOCD_REPO"
-        if [ -n "${GITHUB_TOKEN:-}" ]; then
-          git clone "https://$GITHUB_TOKEN@github.com/$ARGOCD_REPO.git" argocd_repo
-        else
-          git clone "https://github.com/$ARGOCD_REPO.git" argocd_repo
-        fi
+         git clone "https://github.com/$ARGOCD_REPO.git" argocd_repo
 
         # Locate k8s manifests in the app repo. Prefer a 'k8s/base' folder but
         # fall back to any directory containing a kustomization.yaml

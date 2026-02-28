@@ -45,12 +45,7 @@ variable "app_github_repo" {
   default     = "alvarolinarescabre/huma-counter-href-10-sites"
 }
 
-variable "github_token" {
-  description = "GitHub Personal Access Token for updating ArgoCD manifests repo (needs repo write access)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
+## Removed `github_token` variable - repository is public and no token is required
 
 variable "argocd_manifests_repo" {
   description = "GitHub repository for ArgoCD K8s manifests (owner/repo)"
