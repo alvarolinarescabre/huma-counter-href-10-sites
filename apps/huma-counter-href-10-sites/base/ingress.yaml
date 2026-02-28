@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: huma-counter-href-10-sites
+  annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+      alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true
+      alb.ingress.kubernetes.io/target-group-name: huma-multi-cluster-tg
+      alb.ingress.kubernetes.io/load-balancer-attributes: routing.http.drop_invalid_header_fields.enabled=true
+      alb.ingress.kubernetes.io/multi-cluster-target-group: "true"
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: huma-counter-href-10-sites
+                port:
+                  number: 80
+                  
