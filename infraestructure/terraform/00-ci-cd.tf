@@ -438,7 +438,8 @@ resource "aws_codepipeline" "app" {
       owner            = "AWS"
       provider         = "CodeBuild"
       version          = "1"
-      input_artifacts  = ["app_source","build_output"]
+      # Make build_output the primary artifact so imagedefinitions.json is available at the root
+      input_artifacts  = ["build_output","app_source"]
 
       configuration = {
         ProjectName = aws_codebuild_project.app_deploy.name
