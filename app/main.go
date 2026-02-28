@@ -57,7 +57,7 @@ var urls = []string{
 	"https://www.python.org",
 	"https://www.lapatilla.com",
 	"https://nodejs.org",
-	"https://www.facebook.com",
+	"https://aws.amazon.com",
 	"https://www.gitlab.com",
 	"https://alvarolinarescabre.github.io",
 	"https://www.mozilla.org",
