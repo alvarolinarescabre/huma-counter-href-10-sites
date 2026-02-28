@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     REPO_NAME: "huma-counter-href-10-sites"
-    ARGOCD_REPO: "alvarolinarescabre/eks-argocd"
+    ARGOCD_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
     ARGOCD_APP_NAME: "huma-counter-href-10-sites"
     ARGOCD_PUSH_BRANCH: "ci"
 
