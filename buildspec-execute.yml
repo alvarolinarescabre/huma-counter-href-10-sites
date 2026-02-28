@@ -1,0 +1,55 @@
+version: 0.2
+
+env:
+  variables:
+    ARGOCD_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
+    ARGOCD_APP_NAME: "huma-counter-href-10-sites"
+    ARGOCD_PUSH_BRANCH: "argo-update"
+    APP_GITHUB_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
+
+phases:
+  install:
+    commands:
+      - echo Installing dependencies...
+      - yum install -y git jq || apt-get update && apt-get install -y git jq || true
+  build:
+    commands:
+      - echo Reading imagedefinitions.json
+      - if [ -f imagedefinitions.json ]; then IMAGE_URI=$(jq -r '.[0].imageUri' imagedefinitions.json); else echo "imagedefinitions.json not found"; exit 0; fi
+      - echo "IMAGE_URI=$IMAGE_URI"
+      - IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
+      - IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
+      - echo "IMAGE_NAME=$IMAGE_NAME IMAGE_TAG=$IMAGE_TAG"
+
+      - echo "Cloning app repo: $APP_GITHUB_REPO"
+      - if [ -n "${GITHUB_TOKEN:-}" ]; then git clone "https://$GITHUB_TOKEN@github.com/$APP_GITHUB_REPO.git" app_src; else git clone "https://github.com/$APP_GITHUB_REPO.git" app_src; fi
+      - if [ "$IMAGE_TAG" != "latest" ]; then (cd app_src && git checkout "$IMAGE_TAG" || true); fi
+
+      - echo "Cloning ArgoCD manifests repo: $ARGOCD_REPO"
+      - if [ -n "${GITHUB_TOKEN:-}" ]; then git clone "https://$GITHUB_TOKEN@github.com/$ARGOCD_REPO.git" argocd_repo; else git clone "https://github.com/$ARGOCD_REPO.git" argocd_repo; fi
+
+      - TARGET_DIR="argocd_repo/apps/${ARGOCD_APP_NAME}"
+      - mkdir -p "$TARGET_DIR/base"
+      - echo "Copying k8s manifests from app to ArgoCD repo"
+      - rm -rf "$TARGET_DIR/base" || true
+      - mkdir -p "$TARGET_DIR/base"
+      - cp -r app_src/k8s/base/* "$TARGET_DIR/base/"
+
+      - KUSTOMIZATION="$TARGET_DIR/base/kustomization.yaml"
+      - if [ -f "$KUSTOMIZATION" ]; then
+          echo "Updating kustomization with image name and tag";
+          sed -i "s|name: .*|name: $IMAGE_NAME|" "$KUSTOMIZATION" || true;
+          sed -i "s|newTag: .*|newTag: $IMAGE_TAG|" "$KUSTOMIZATION" || true;
+        fi
+
+      - cd argocd_repo
+      - git config user.email "codebuild@local"
+      - git config user.name "codebuild"
+      - git add "apps/${ARGOCD_APP_NAME}"
+      - if git diff --staged --quiet; then echo "No changes to push"; exit 0; fi
+      - git commit -m "argocd-update: update ${ARGOCD_APP_NAME} image to ${IMAGE_TAG}" || true
+      - git push origin HEAD:${ARGOCD_PUSH_BRANCH:-main} || true
+
+artifacts:
+  files:
+    - '**/*'

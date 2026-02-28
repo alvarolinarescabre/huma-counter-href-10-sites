@@ -262,6 +262,10 @@ resource "aws_codebuild_project" "app_deploy" {
     type            = "LINUX_CONTAINER"
     environment_variable {
       name  = "ARGOCD_REPO"
+      value = var.argocd_manifests_repo
+    }
+    environment_variable {
+      name  = "APP_GITHUB_REPO"
       value = var.app_github_repo
     }
     environment_variable {
@@ -285,6 +289,8 @@ resource "aws_codebuild_project" "app_deploy" {
 
   source {
     type      = "CODEPIPELINE"
+    # override buildspec to use dedicated deploy buildspec
+    buildspec  = file("${path.root}/../../buildspec-execute.yml")
   }
 
   tags = {
@@ -446,8 +452,6 @@ resource "aws_codepipeline" "app" {
       }
     }
   }
-
-  # (Removed Terraform Plan/Apply stages — pipeline now only builds the app image)
 
   tags = {
     Project = local.name

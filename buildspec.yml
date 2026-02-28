@@ -3,9 +3,6 @@ version: 0.2
 env:
   variables:
     REPO_NAME: "huma-counter-href-10-sites"
-    ARGOCD_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
-    ARGOCD_APP_NAME: "huma-counter-href-10-sites"
-    ARGOCD_PUSH_BRANCH: "ci"
 
 phases:
   install:
@@ -32,9 +29,7 @@ phases:
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:latest
       - echo Construcción completada el $(date)
       - printf '[{\"name\":\"huma-container\",\"imageUri\":\"%s\"}]' $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG > imagedefinitions.json
-      - echo Actualizar manifiestos en el repo ArgoCD...
-      - chmod +x infraestructure/scripts/update-argocd.sh
-      - "./infraestructure/scripts/update-argocd.sh $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG || echo 'Advertencia: fallo al actualizar ArgoCD repo'"
+      - echo Imagedefinitions ready; ArgoCD update handled by pipeline Deploy step
 
 artifacts:
   files:
