@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# If infra script exists, delegate to it (keeps single source of truth)
+if [ -f infraestructure/scripts/update-argocd.sh ]; then
+  exec infraestructure/scripts/update-argocd.sh "$@"
+#!/usr/bin/env bash
+set -euo pipefail
+
 if [ -z "${GITHUB_TOKEN:-}" ]; then
   echo "GITHUB_TOKEN not set. Will attempt unauthenticated or SSH clone."
 fi
@@ -30,11 +36,9 @@ echo "Cloning $ARGOCD_REPO to $TMPDIR/argocd"
 if [ -n "${GITHUB_TOKEN:-}" ]; then
   git clone "https://$GITHUB_TOKEN@github.com/$ARGOCD_REPO.git" "$TMPDIR/argocd"
 else
-  # Try HTTPS anonymous clone first
   if git clone "https://github.com/$ARGOCD_REPO.git" "$TMPDIR/argocd" 2>/dev/null; then
     echo "Cloned via anonymous HTTPS"
   else
-    # Fall back to SSH (requires appropriate SSH key configured in environment)
     git clone "git@github.com:$ARGOCD_REPO.git" "$TMPDIR/argocd"
   fi
 fi
