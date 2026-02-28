@@ -16,12 +16,19 @@ phases:
     commands:
       - |
         echo Reading imagedefinitions.json
-        if [ -f imagedefinitions.json ]; then
-          IMAGE_URI=$(jq -r '.[0].imageUri' imagedefinitions.json)
-        else
+        # Locate imagedefinitions.json produced by the build stage. It may be placed
+        # in a secondary artifact path under /codebuild/output/src*/src/s3/... or
+        # in the working dir. Search common locations.
+        IMG_PATH=$(find /codebuild/output -maxdepth 5 -type f -name imagedefinitions.json -print -quit 2>/dev/null || true)
+        if [ -z "$IMG_PATH" ]; then
+          IMG_PATH=$(find . -maxdepth 6 -type f -name imagedefinitions.json -print -quit 2>/dev/null || true)
+        fi
+        if [ -z "$IMG_PATH" ]; then
           echo "imagedefinitions.json not found"
           exit 0
         fi
+        echo "Using imagedefinitions.json at: $IMG_PATH"
+        IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH")
         echo "IMAGE_URI=$IMAGE_URI"
         IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
         IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
