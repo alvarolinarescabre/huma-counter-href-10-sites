@@ -55,7 +55,7 @@ variable "github_token" {
 variable "argocd_manifests_repo" {
   description = "GitHub repository for ArgoCD K8s manifests (owner/repo)"
   type        = string
-  default     = "alvarolinarescabre/fastapi-get-href-10-websites-argocd"
+  default     = "alvarolinarescabre/huma-counter-href-10-sites"
 }
 
 variable "argocd_role_arn" {

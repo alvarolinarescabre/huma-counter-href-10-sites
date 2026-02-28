@@ -28,7 +28,11 @@ phases:
           exit 0
         fi
         echo "Using imagedefinitions.json at: $IMG_PATH"
-        IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH")
+        # Try parsing with jq, but fall back to a regex if jq fails on malformed JSON
+        IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH" 2>/tmp/jqerr || true)
+        if [ -z "$IMAGE_URI" ]; then
+          IMAGE_URI=$(grep -oP '"imageUri"\s*:\s*"\K[^"]+' "$IMG_PATH" | head -n1 || true)
+        fi
         echo "IMAGE_URI=$IMAGE_URI"
         IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
         IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
@@ -40,7 +44,7 @@ phases:
         else
           git clone "https://github.com/$APP_GITHUB_REPO.git" app_src
         fi
-        if [ "$IMAGE_TAG" != "latest" ]; then
+        if [ -n "$IMAGE_TAG" ] && [ "$IMAGE_TAG" != "latest" ]; then
           (cd app_src && git checkout "$IMAGE_TAG" || true)
         fi
 
@@ -51,11 +55,27 @@ phases:
           git clone "https://github.com/$ARGOCD_REPO.git" argocd_repo
         fi
 
+        # Locate k8s manifests in the app repo. Prefer a 'k8s/base' folder but
+        # fall back to any directory containing a kustomization.yaml
+        APP_K8S_DIR=""
+        if [ -d "app_src/k8s/base" ]; then
+          APP_K8S_DIR="app_src/k8s/base"
+        else
+          KUSTOM=$(find app_src -type f -name kustomization.yaml -print -quit 2>/dev/null || true)
+          if [ -n "$KUSTOM" ]; then
+            APP_K8S_DIR=$(dirname "$KUSTOM")
+          fi
+        fi
+
         TARGET_DIR="argocd_repo/apps/${ARGOCD_APP_NAME}"
         rm -rf "$TARGET_DIR/base" || true
         mkdir -p "$TARGET_DIR/base"
-        echo "Copying k8s manifests from app to ArgoCD repo"
-        cp -r app_src/k8s/base/* "$TARGET_DIR/base/"
+        echo "Copying k8s manifests from app to ArgoCD repo (source: ${APP_K8S_DIR:-not found})"
+        if [ -n "$APP_K8S_DIR" ]; then
+          cp -r "$APP_K8S_DIR"/* "$TARGET_DIR/base/" || true
+        else
+          echo "No k8s manifests found in app repo; skipping copy"
+        fi
 
         KUSTOMIZATION="$TARGET_DIR/base/kustomization.yaml"
         if [ -f "$KUSTOMIZATION" ]; then
