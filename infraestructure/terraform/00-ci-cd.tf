@@ -354,7 +354,8 @@ resource "aws_iam_role_policy" "codepipeline_app" {
           "codebuild:BatchGetBuilds"
         ]
         Resource = [
-          aws_codebuild_project.app_build.arn
+          aws_codebuild_project.app_build.arn,
+          aws_codebuild_project.app_deploy.arn
         ]
       },
       {
@@ -432,6 +433,7 @@ resource "aws_codepipeline" "app" {
 
       configuration = {
         ProjectName = aws_codebuild_project.app_build.name
+        PrimarySource = "app_source"
       }
     }
   }
@@ -447,7 +449,7 @@ resource "aws_codepipeline" "app" {
       provider         = "CodeBuild"
       version          = "1"
       # Make build_output the primary artifact so imagedefinitions.json is available at the root
-      input_artifacts  = ["build_output","app_source"]
+      input_artifacts  = ["build_output"]
 
       configuration = {
         ProjectName = aws_codebuild_project.app_deploy.name
