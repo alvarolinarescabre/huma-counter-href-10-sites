@@ -5,7 +5,7 @@ phases:
     commands:
       - echo Iniciando sesión en Amazon ECR...
       - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - REPO_NAME="chamo/huma"
+      - REPO_NAME="fastapi-counter-href"
       - IMAGE_TAG="latest"
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
   build:
