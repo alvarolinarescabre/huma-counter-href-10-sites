@@ -34,7 +34,11 @@ resource "terraform_data" "argocd_clusterrole" {
   triggers_replace = [filesha256("${path.root}/argocd/clusterrole.yaml")]
 
   provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name} && kubectl apply -f ${path.root}/argocd/clusterrole.yaml"
+    command = <<-EOT
+      aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name} && \
+      kubectl apply -f ${path.root}/argocd/clusterrole.yaml && \
+      printf "apiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nmetadata:\n  name: argocd-iam-role-binding\nsubjects:\n- kind: User\n  name: ${module.argocd_capability.iam_role_arn}\n  apiGroup: rbac.authorization.k8s.io\nroleRef:\n  kind: ClusterRole\n  name: argocd-capability-full-access\n  apiGroup: rbac.authorization.k8s.io\n" | kubectl apply -f -
+    EOT
   }
 
   depends_on = [module.argocd_capability, terraform_data.kubeconfig]
@@ -51,10 +55,11 @@ resource "terraform_data" "argocd_cluster-secret" {
 }
 
 resource "terraform_data" "argocd_application" {
-  triggers_replace = [filesha256("${path.root}/argocd/application.yaml"), module.eks.cluster_arn]
+  # Use the application manifest that points to the repo path with the app manifests
+  triggers_replace = [filesha256("${path.root}/argocd/application-app.yaml"), module.eks.cluster_arn]
 
   provisioner "local-exec" {
-    command = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name} && CLUSTER_ARN='${module.eks.cluster_arn}' envsubst < ${path.root}/argocd/application.yaml | kubectl apply -f -"
+    command = "aws eks update-kubeconfig --region ${var.region} --name ${module.eks.cluster_name} && CLUSTER_ARN='${module.eks.cluster_arn}' envsubst < ${path.root}/argocd/application-app.yaml | kubectl apply -f -"
   }
 
   depends_on = [module.argocd_capability, terraform_data.kubeconfig, terraform_data.argocd_cluster-secret]

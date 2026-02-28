@@ -4,7 +4,7 @@ env:
   variables:
     ARGOCD_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
     ARGOCD_APP_NAME: "huma-counter-href-10-sites"
-    ARGOCD_PUSH_BRANCH: "argo-update"
+    ARGOCD_PUSH_BRANCH: "main"
     APP_GITHUB_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
 
 phases:
@@ -85,6 +85,12 @@ phases:
           exit 0
         fi
         git commit -m "argocd-update: update ${ARGOCD_APP_NAME} image to ${IMAGE_TAG}" || true
+        # If a GITHUB_TOKEN is provided in the environment, use it for an
+        # authenticated HTTPS push; otherwise attempt to push using the
+        # existing origin (will fail if write access is required).
+        if [ -n "$GITHUB_TOKEN" ]; then
+          git remote set-url origin "https://$GITHUB_TOKEN@github.com/$ARGOCD_REPO.git"
+        fi
         git push origin HEAD:${ARGOCD_PUSH_BRANCH:-main} || true
 
 artifacts:
