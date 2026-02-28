@@ -451,6 +451,7 @@ resource "aws_codepipeline" "app" {
 
       configuration = {
         ProjectName = aws_codebuild_project.app_deploy.name
+        PrimarySource = "build_output"
       }
     }
   }
