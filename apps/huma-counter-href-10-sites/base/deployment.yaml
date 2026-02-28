@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: huma-counter-href-10-sites
+  labels:
+    app: huma-counter-href-10-sites
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: huma-counter-href-10-sites
+  template:
+    metadata:
+      labels:
+        app: huma-counter-href-10-sites
+    spec:
+      containers:
+        - name: huma-container
+          image: REPLACE_IMAGE
+          ports:
+            - containerPort: 8888
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 10
+            periodSeconds: 20
