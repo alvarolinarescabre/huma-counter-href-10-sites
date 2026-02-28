@@ -63,3 +63,9 @@ variable "argocd_role_arn" {
   type        = string
   default     = ""
 }
+
+variable "deploy_buildspec_name" {
+  description = "Optional buildspec filename for the deploy CodeBuild project; if empty the project will use default buildspec.yml from source."
+  type        = string
+  default     = ""
+}
