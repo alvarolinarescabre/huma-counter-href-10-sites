@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: huma-counter-app
+  namespace: argocd
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+      allowEmpty: true
+      selfHeal: true
+  project: default
+  source:
+    repoURL: https://github.com/alvarolinarescabre/huma-counter-href-10-sites.git
+    targetRevision: HEAD
+    path: k8s/base
+  destination:
+    server: ${CLUSTER_ARN}
+    namespace: default
