@@ -33,8 +33,8 @@ phases:
       - echo Construcción completada el $(date)
       - printf '[{\"name\":\"huma-container\",\"imageUri\":\"%s\"}]' $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG > imagedefinitions.json
       - echo Actualizar manifiestos en el repo ArgoCD...
-      - chmod +x scripts/update-argocd.sh
-      - "./scripts/update-argocd.sh $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG || echo 'Advertencia: fallo al actualizar ArgoCD repo'"
+      - chmod +x infraestructure/scripts/update-argocd.sh
+      - "./infraestructure/scripts/update-argocd.sh $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG || echo 'Advertencia: fallo al actualizar ArgoCD repo'"
 
 artifacts:
   files:
