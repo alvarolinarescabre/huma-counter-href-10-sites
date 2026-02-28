@@ -17,6 +17,28 @@ resource "aws_ecr_repository" "app" {
   }
 }
 
+################################################################################
+# Secrets Manager - placeholder for GITHUB token used by deploy CodeBuild
+################################################################################
+
+resource "aws_secretsmanager_secret" "app_deploy_github_token" {
+  name        = "${local.name}-app-deploy-github-token"
+  description = "GitHub token for pushing ArgoCD manifests from app_deploy CodeBuild. Set secret value via AWS console or CLI."
+
+  tags = {
+    Project = local.name
+  }
+}
+
+# If the token value is provided via Terraform variable, create a secret version
+resource "aws_secretsmanager_secret_version" "app_deploy_github_token_value" {
+  count = var.app_deploy_github_token != "" ? 1 : 0
+
+  secret_id     = aws_secretsmanager_secret.app_deploy_github_token.id
+  secret_string = var.app_deploy_github_token
+}
+
+
 resource "aws_ecr_lifecycle_policy" "app" {
   repository = aws_ecr_repository.app.name
 
@@ -163,6 +185,14 @@ resource "aws_iam_role_policy" "codebuild_app" {
         Resource = aws_codestarconnections_connection.github.arn
       },
       # SSM access removed (no GITHUB token required for public repo)
+      {
+        Sid    = "SecretsManagerAccess"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "${aws_secretsmanager_secret.app_deploy_github_token.arn}"
+      }
     ]
   })
 }
@@ -244,7 +274,12 @@ resource "aws_codebuild_project" "app_deploy" {
       name  = "ARGOCD_PUSH_BRANCH"
       value = var.github_branch
     }
-    # No GITHUB_TOKEN environment variable — repo is public
+    # GITHUB token (from Secrets Manager) - placeholder secret created below
+    environment_variable {
+      name  = "GITHUB_TOKEN"
+      value = aws_secretsmanager_secret.app_deploy_github_token.arn
+      type  = "SECRETS_MANAGER"
+    }
   }
 
   artifacts {

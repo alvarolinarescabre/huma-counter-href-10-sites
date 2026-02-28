@@ -64,3 +64,10 @@ variable "deploy_buildspec_name" {
   type        = string
   default     = ""
 }
+
+variable "app_deploy_github_token" {
+  description = "(Optional) GitHub token used by the deploy CodeBuild to push ArgoCD manifest updates. If provided, Terraform will store it in Secrets Manager via a secret version."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

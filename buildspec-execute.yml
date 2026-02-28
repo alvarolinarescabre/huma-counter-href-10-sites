@@ -59,17 +59,17 @@ phases:
           fi
         fi
 
-        TARGET_DIR="argocd_repo/apps/${ARGOCD_APP_NAME}"
-        rm -rf "$TARGET_DIR/base" || true
-        mkdir -p "$TARGET_DIR/base"
+        TARGET_DIR="argocd_repo/infraestructure/k8s/base"
+        rm -rf "$TARGET_DIR" || true
+        mkdir -p "$TARGET_DIR"
         echo "Copying k8s manifests from app to ArgoCD repo (source: ${APP_K8S_DIR:-not found})"
         if [ -n "$APP_K8S_DIR" ]; then
-          cp -r "$APP_K8S_DIR"/* "$TARGET_DIR/base/" || true
+          cp -r "$APP_K8S_DIR"/* "$TARGET_DIR/" || true
         else
           echo "No k8s manifests found in app repo; skipping copy"
         fi
 
-        KUSTOMIZATION="$TARGET_DIR/base/kustomization.yaml"
+        KUSTOMIZATION="$TARGET_DIR/kustomization.yaml"
         if [ -f "$KUSTOMIZATION" ]; then
           echo "Updating kustomization with image name and tag"
           sed -i "s|name: .*|name: $IMAGE_NAME|" "$KUSTOMIZATION" || true
@@ -79,7 +79,7 @@ phases:
         cd argocd_repo
         git config user.email "codebuild@local"
         git config user.name "codebuild"
-        git add "apps/${ARGOCD_APP_NAME}"
+        git add "infraestructure/k8s" || git add "$TARGET_DIR" || true
         if git diff --staged --quiet; then
           echo "No changes to push"
           exit 0
