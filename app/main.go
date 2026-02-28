@@ -55,7 +55,7 @@ type LinksOutput struct {
 var urls = []string{
 	"https://go.dev",
 	"https://www.python.org",
-	"https://www.realpython.com",
+	"https://www.lapatilla.com",
 	"https://nodejs.org",
 	"https://www.facebook.com",
 	"https://www.gitlab.com",
