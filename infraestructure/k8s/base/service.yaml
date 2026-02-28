@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: huma-counter-href-10-sites
+  name: huma-counter
   labels:
-    app: huma-counter-href-10-sites
+    app: huma-counter
 spec:
   type: ClusterIP
   selector:
-    app: huma-counter-href-10-sites
+    app: huma-counter
   ports:
     - protocol: TCP
       port: 80

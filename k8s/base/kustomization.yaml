@@ -1,8 +1,0 @@
-resources:
-  - deployment.yaml
-  - service.yaml
-
-images:
-  - name: REPLACE_WITH_IMAGE
-    newName: REPLACE_WITH_IMAGE
-    newTag: ""
