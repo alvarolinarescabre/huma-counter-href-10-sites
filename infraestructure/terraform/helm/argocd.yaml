@@ -1,0 +1,22 @@
+global:
+  domain: ""
+
+configs:
+  params:
+    server.insecure: true
+
+server:
+  extraArgs:
+    - --insecure
+  ingress:
+    enabled: true
+    ingressClassName: alb
+    annotations:
+      alb.ingress.kubernetes.io/backend-protocol: HTTP
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/tags: Name=argo-cd-alb
+      alb.ingress.kubernetes.io/target-group-name: argocd-multi-cluster-tg
+      alb.ingress.kubernetes.io/load-balancer-attributes: routing.http.drop_invalid_header_fields.enabled=true
+      alb.ingress.kubernetes.io/multi-cluster-target-group: "true"

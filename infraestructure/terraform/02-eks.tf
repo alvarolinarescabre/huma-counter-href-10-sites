@@ -79,22 +79,23 @@ resource "aws_eks_access_policy_association" "codebuild_cluster_admin" {
 */
 
 resource "aws_eks_access_entry" "argocd_role" {
-  # Create an EKS access entry for the ArgoCD IAM role. Prefer the explicit
-  # `var.argocd_role_arn` when provided, otherwise fall back to the role ARN
-  # exported by the `argocd_capability` module (if present).
-  count = (var.argocd_role_arn != "" || try(module.argocd_capability.iam_role_arn, "") != "") ? 1 : 0
+  # Create an EKS access entry for the ArgoCD IAM role if provided via
+  # `var.argocd_role_arn`. If you have an IAM role created externally for
+  # ArgoCD, pass its ARN in that variable. Otherwise this resource is
+  # skipped.
+  count = var.argocd_role_arn != "" ? 1 : 0
 
   cluster_name = module.eks.cluster_name
-  principal_arn = var.argocd_role_arn != "" ? var.argocd_role_arn : try(module.argocd_capability.iam_role_arn, "")
+  principal_arn = var.argocd_role_arn
   type          = "STANDARD"
 
   depends_on = [module.eks]
 }
 
 resource "aws_eks_access_policy_association" "argocd_cluster_admin" {
-  count = (var.argocd_role_arn != "" || try(module.argocd_capability.iam_role_arn, "") != "") ? 1 : 0
+  count = var.argocd_role_arn != "" ? 1 : 0
   cluster_name = module.eks.cluster_name
-  principal_arn = var.argocd_role_arn != "" ? var.argocd_role_arn : try(module.argocd_capability.iam_role_arn, "")
+  principal_arn = var.argocd_role_arn
   policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
 
   access_scope {

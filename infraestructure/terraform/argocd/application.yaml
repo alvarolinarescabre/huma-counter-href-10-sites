@@ -15,5 +15,5 @@ spec:
     targetRevision: main
     path: infraestructure/k8s/base
   destination:
-    server: ${CLUSTER_ARN}
+    server: https://kubernetes.default.svc
     namespace: default
