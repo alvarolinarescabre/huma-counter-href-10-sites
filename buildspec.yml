@@ -8,7 +8,7 @@ phases:
   install:
     commands:
       - echo Instalando dependencias...
-      - yum install -y git || apt-get install -y git || true
+      - dnf install -y git || apt-get install -y git || true
   pre_build:
     commands:
       - echo Iniciando sesión en Amazon ECR...
@@ -29,7 +29,6 @@ phases:
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:latest
       - echo Construcción completada el $(date)
       - printf '[{\"name\":\"huma-container\",\"imageUri\":\"%s\"}]' $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG > imagedefinitions.json
-      - echo Imagedefinitions ready; ArgoCD update handled by pipeline Deploy step
 
 artifacts:
   files:

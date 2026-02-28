@@ -36,7 +36,8 @@ phases:
       - cp -r app_src/k8s/base/* "$TARGET_DIR/base/"
 
       - KUSTOMIZATION="$TARGET_DIR/base/kustomization.yaml"
-      - if [ -f "$KUSTOMIZATION" ]; then
+      - |
+        if [ -f "$KUSTOMIZATION" ]; then
           echo "Updating kustomization with image name and tag";
           sed -i "s|name: .*|name: $IMAGE_NAME|" "$KUSTOMIZATION" || true;
           sed -i "s|newTag: .*|newTag: $IMAGE_TAG|" "$KUSTOMIZATION" || true;
