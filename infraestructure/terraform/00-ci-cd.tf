@@ -289,9 +289,10 @@ resource "aws_codebuild_project" "app_deploy" {
 
   source {
     type      = "CODEPIPELINE"
-    # If `deploy_buildspec_name` is provided, embed that file as an override.
-    # Otherwise leave unset so CodeBuild will use the repository's default buildspec.yml
-    buildspec = var.deploy_buildspec_name != "" ? file("${path.root}/../../${var.deploy_buildspec_name}") : null
+    # If `deploy_buildspec_name` is provided, set that filename as the Buildspec name
+    # (CodeBuild will look for this file in the source). Otherwise leave unset
+    # so CodeBuild will use the repository's default `buildspec.yml`.
+    buildspec = var.deploy_buildspec_name != "" ? var.deploy_buildspec_name : null
   }
 
   tags = {
