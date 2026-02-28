@@ -448,12 +448,13 @@ resource "aws_codepipeline" "app" {
       owner            = "AWS"
       provider         = "CodeBuild"
       version          = "1"
-      # Make build_output the primary artifact so imagedefinitions.json is available at the root
-      input_artifacts  = ["build_output"]
+          # Make app_source the primary artifact so CodeBuild can read the repo buildspec (buildspec-execute.yml)
+          # and still receive `imagedefinitions.json` via the `build_output` artifact.
+          input_artifacts  = ["app_source", "build_output"]
 
       configuration = {
         ProjectName = aws_codebuild_project.app_deploy.name
-        PrimarySource = "build_output"
+        PrimarySource = "app_source"
       }
     }
   }
