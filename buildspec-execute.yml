@@ -67,5 +67,5 @@ phases:
         fi
         
       - echo "Haciendo commit y push de los cambios..."
-      - git commit -m "GitOps: actualización automática de imagen a ${IMAGE_TAG}"
+      - git commit -m "GitOps - actualización automática de imagen a ${IMAGE_TAG}"
       - git push origin HEAD:${ARGOCD_PUSH_BRANCH}
