@@ -37,13 +37,6 @@ phases:
       - ls -la
 
       - TARGET_DIR="infraestructure/k8s/base"
-      - cd $TARGET_DIR
-      - |
-        if [ ! -d "$TARGET_DIR" ]; then
-          echo "Error: El directorio $TARGET_DIR no existe en el repositorio."
-          exit 1
-        fi
-      
       - cd "$TARGET_DIR"
       - echo "Actualizando kustomization.yaml con la nueva imagen usando Kustomize..."
       - kustomize edit set image "${IMAGE_NAME}=${IMAGE_URI}"
