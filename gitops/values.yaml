@@ -3,7 +3,7 @@
 replicaCount: 1
 image:
   repository: 312910855403.dkr.ecr.eu-west-1.amazonaws.com/huma-counter-href-10-sites
-  tag: 21c06f3
+  tag: 0df194b
   pullPolicy: IfNotPresent
 nameOverride: ""
 fullnameOverride: ""
