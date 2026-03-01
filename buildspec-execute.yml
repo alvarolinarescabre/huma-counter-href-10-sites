@@ -41,6 +41,8 @@ phases:
       - cd "$TARGET_DIR"
       - echo "Actualizando kustomization.yaml con la nueva imagen usando Kustomize..."
       - kustomize edit set image "${IMAGE_NAME}=${IMAGE_URI}"
+      - cat kustomization.yaml
+      - ls -la
       
       - cd ../../../
 
