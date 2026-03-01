@@ -21,8 +21,7 @@ phases:
       - TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
 
       - echo "Leyendo imagedefinitions.json inyectado por CodePipeline..."
-      - cd /codebuild/output
-      - ls -la
+      - cp /codebuild/output/imagedefinitions.json imagedefinitions.json
       - if [ ! -f "imagedefinitions.json" ]; then echo "Error: imagedefinitions.json no fue inyectado por CodePipeline."; exit 1; fi
 
       - echo "Leyendo imagedefinitions.json..."
