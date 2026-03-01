@@ -33,35 +33,35 @@ phases:
       - echo Construcción completada el $(date)
       - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $ECR_REPO_URI:$IMAGE_TAG > imagedefinitions.json
 
-      - echo Obteniendo token de GitHub desde Secrets Manager...
-      - TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
-
-      - echo Clonando repositorio GitOps...
-      - git clone "https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git" gitops_repo
-      - cd gitops_repo
-
-      - echo Comparando tag actual con la nueva...
-      - CURRENT_TAG=$(yq e '.image.tag' $GITOPS_VALUES_PATH)
-      - echo "Tag actual -> $CURRENT_TAG"
-      - echo "Tag nueva  -> $IMAGE_TAG"
-
       - |
+        echo "Obteniendo token de GitHub desde Secrets Manager..."
+        export TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
+
+        echo "Clonando repositorio GitOps..."
+        git clone "https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git" gitops_repo
+        cd gitops_repo
+
+        echo "Comparando tag actual con la nueva..."
+        CURRENT_TAG=$(yq e '.image.tag' $GITOPS_VALUES_PATH)
+        echo "Tag actual -> $CURRENT_TAG"
+        echo "Tag nueva  -> $IMAGE_TAG"
+
         if [ "$CURRENT_TAG" = "$IMAGE_TAG" ]; then
           echo "La tag ya está actualizada. No hay cambios que hacer."
           exit 0
         fi
 
-      - echo "Actualizando values.yaml con la nueva imagen..."
-      - yq e -i ".image.repository = \"${ECR_REPO_URI}\"" "$GITOPS_VALUES_PATH"
-      - yq e -i ".image.tag = \"${IMAGE_TAG}\"" "$GITOPS_VALUES_PATH"
-      - cat "$GITOPS_VALUES_PATH"
+        echo "Actualizando values.yaml con la nueva imagen..."
+        yq e -i ".image.repository = \"${ECR_REPO_URI}\"" "$GITOPS_VALUES_PATH"
+        yq e -i ".image.tag = \"${IMAGE_TAG}\"" "$GITOPS_VALUES_PATH"
+        cat "$GITOPS_VALUES_PATH"
 
-      - git config user.email "codebuild@aws.local"
-      - git config user.name "AWS CodeBuild"
-      - git remote set-url origin "https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git"
-      - git add "$GITOPS_VALUES_PATH"
-      - git commit -m "GitOps - actualización automática de imagen a ${IMAGE_TAG}"
-      - git push origin HEAD:${GITOPS_BRANCH}
+        git config user.email "codebuild@aws.local"
+        git config user.name "AWS CodeBuild"
+        git remote set-url origin "https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git"
+        git add "$GITOPS_VALUES_PATH"
+        git commit -m "GitOps - actualización automática de imagen a ${IMAGE_TAG}"
+        git push origin HEAD:${GITOPS_BRANCH}
 
 artifacts:
   files:
