@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: {{ include "huma-counter.fullname" . }}
   labels:
-    {{- include "huma-counter.labels" . | nindent 4 -}}
+    {{- include "huma-counter.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
