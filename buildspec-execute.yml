@@ -28,8 +28,8 @@ phases:
       
       - echo "Leyendo imagedefinitions.json desde $IMG_PATH"
       - IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH")
-      - IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
-      # Asume que el nombre base de la imagen en tu kustomization coincide con la parte antes del tag
+      - |
+        IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
       - IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
       
       - echo "Nueva imagen detectada -> $IMAGE_URI"
