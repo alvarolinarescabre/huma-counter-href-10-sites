@@ -4,6 +4,7 @@ env:
   variables:
     GITOPS_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
     ARGOCD_PUSH_BRANCH: "main"
+    IMAGE_URI: "312910855403.dkr.ecr.eu-west-1.amazonaws.com/huma-counter-href-10-sites"
 
 phases:
   install:
@@ -19,15 +20,10 @@ phases:
       - TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
 
       - echo "Buscando imagedefinitions.json..."
-      - IMG_PATH=$(find . -maxdepth 6 -type f -name imagedefinitions.json -print -quit 2>/dev/null)
-      - |
-        if [ -z "$IMG_PATH" ]; then
-          echo "Error: imagedefinitions.json no encontrado."
-          exit 1
-        fi
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$ARGOCD_APP_NAME" "$IMAGE_URI" > imagedefinitions.json
       
-      - echo "Leyendo imagedefinitions.json desde $IMG_PATH"
-      - IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH")
+      - echo "Leyendo imagedefinitions.json..."
+      - IMAGE_URI=$(jq -r '.[0].imageUri' imagedefinitions.json)
       - |
         IMAGE_TAG=$(echo "$IMAGE_URI" | cut -d':' -f2)
       - IMAGE_NAME=$(echo "$IMAGE_URI" | cut -d':' -f1)
@@ -48,8 +44,6 @@ phases:
       
       - cd "$TARGET_DIR"
       - echo "Actualizando kustomization.yaml con la nueva imagen usando Kustomize..."
-      # Kustomize edit set image expects 'name=newImage:tag' or 'name:tag'
-      # Since IMAGE_NAME contains the full ECR repo path, we use it as the match key.
       - kustomize edit set image "${IMAGE_NAME}=${IMAGE_URI}"
       
       - cd ../../../
