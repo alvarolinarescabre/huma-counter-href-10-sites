@@ -13,7 +13,10 @@ spec:
   source:
     repoURL: https://github.com/alvarolinarescabre/huma-counter-href-10-sites.git
     targetRevision: main
-    path: infraestructure/k8s/base
+    path: gitops
+    helm:
+      valueFiles:
+        - values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: default

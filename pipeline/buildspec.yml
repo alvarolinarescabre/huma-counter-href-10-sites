@@ -1,0 +1,67 @@
+version: 0.2
+
+env:
+  variables:
+    REPO_NAME: "huma-counter-href-10-sites"
+    CONTAINER_NAME: "huma-container"
+    GITOPS_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
+    GITOPS_BRANCH: "main"
+    GITOPS_VALUES_PATH: "gitops/values.yaml"
+
+phases:
+  install:
+    commands:
+      - echo Instalando dependencias...
+      - apt-get update && apt-get install -y git jq
+      - curl -sL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+  pre_build:
+    commands:
+      - echo Iniciando sesión en Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+  build:
+    commands:
+      - echo Construyendo la imagen Docker...
+      - docker build -f app/Dockerfile -t $ECR_REPO_URI:latest .
+      - docker tag $ECR_REPO_URI:latest $ECR_REPO_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Subiendo la imagen a ECR...
+      - docker push $ECR_REPO_URI:latest
+      - docker push $ECR_REPO_URI:$IMAGE_TAG
+      - echo Construcción completada el $(date)
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $ECR_REPO_URI:$IMAGE_TAG > imagedefinitions.json
+
+      - echo Obteniendo token de GitHub desde Secrets Manager...
+      - TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
+
+      - echo Clonando repositorio GitOps...
+      - git clone "https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git" gitops_repo
+      - cd gitops_repo
+
+      - echo Comparando tag actual con la nueva...
+      - CURRENT_TAG=$(yq e '.image.tag' $GITOPS_VALUES_PATH)
+      - echo "Tag actual -> $CURRENT_TAG"
+      - echo "Tag nueva  -> $IMAGE_TAG"
+
+      - |
+        if [ "$CURRENT_TAG" = "$IMAGE_TAG" ]; then
+          echo "La tag ya está actualizada. No hay cambios que hacer."
+          exit 0
+        fi
+
+      - echo "Actualizando values.yaml con la nueva imagen..."
+      - yq e -i ".image.repository = \"${ECR_REPO_URI}\"" "$GITOPS_VALUES_PATH"
+      - yq e -i ".image.tag = \"${IMAGE_TAG}\"" "$GITOPS_VALUES_PATH"
+      - cat "$GITOPS_VALUES_PATH"
+
+      - git config user.email "codebuild@aws.local"
+      - git config user.name "AWS CodeBuild"
+      - git add "$GITOPS_VALUES_PATH"
+      - git commit -m "GitOps - actualización automática de imagen a ${IMAGE_TAG}"
+      - git push origin HEAD:${GITOPS_BRANCH}
+
+artifacts:
+  files:
+    - imagedefinitions.json

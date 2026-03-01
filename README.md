@@ -7,15 +7,15 @@ Highlights:
 - 🔧 App: Huma service in `app/`
 - 🐳 Container: Dockerfile + ECR integration
 - ⚙️ CI/CD: AWS CodePipeline (Source → Build → Deploy) and CodeBuild
-- 📦 GitOps: ArgoCD manifests under `infraestructure/k8s` and ArgoCD Application manifests in Terraform
+- 📦 GitOps: ArgoCD manifests under `gitops/` and ArgoCD Application manifests in Terraform
 - 🛠️ Infra-as-code: Terraform modules to provision pipeline, ECR, and integrations
 
 Quick links
 
 - App source: `app/`
-- K8s manifests: `k8s/`
-- CI/CD terraform: `infraestructure/terraform/`
-- Buildspecs: `buildspec.yml` (build) and `buildspec-execute.yml` (deploy)
+- K8s manifests: `gitops/`
+- CI/CD terraform: `infrastructure/terraform/`
+- Buildspecs: `pipeline/buildspec.yml` (build) and `pipeline/buildspec-execute.yml` (deploy)
 
 Getting started 🏁
 
@@ -78,7 +78,7 @@ Outputs & helpful commands 🧾
 aws eks update-kubeconfig --region <region> --name <cluster-name>
 ```
 
-- To view pipeline name and CodeBuild projects, run `terraform output` in `infraestructure/terraform`.
+- To view pipeline name and CodeBuild projects, run `terraform output` in `infrastructure/terraform`.
 
 Want me to help? 🤝
 

@@ -237,6 +237,7 @@ resource "aws_codebuild_project" "app_build" {
 
   source {
     type      = "CODEPIPELINE"
+    buildspec = "pipeline/buildspec.yml"
   }
 
   tags = {
