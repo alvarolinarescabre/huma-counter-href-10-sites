@@ -21,17 +21,16 @@ phases:
       - TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
 
       - echo "Leyendo imagedefinitions.json inyectado por CodePipeline..."
-      - |
-        if [ ! -f "imagedefinitions.json" ]; then
-          echo "Error: imagedefinitions.json no fue inyectado por CodePipeline."
-          exit 1
-        fi
+      - cd /codebuild/output
+      - ls -la
+      - if [ ! -f "imagedefinitions.json" ]; then echo "Error: imagedefinitions.json no fue inyectado por CodePipeline."; exit 1; fi
 
       - echo "Leyendo imagedefinitions.json..."
       - IMAGE_URI=$(jq -r '.[0].imageUri' imagedefinitions.json)
-      - |
-        IMAGE_TAG=$(echo "$IMAGE_URI" | cut -d':' -f2)
-      - IMAGE_NAME=$(echo "$IMAGE_URI" | cut -d':' -f1)
+      - IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F':' '{print $2}')
+      - IMAGE_NAME=$(echo "$IMAGE_URI" | awk -F':' '{print $1}')
+      
+      - if [ -z "$IMAGE_TAG" ] || [ "$IMAGE_TAG" = "$IMAGE_URI" ]; then echo "Error: No se pudo extraer el tag de la imagen."; exit 1; fi
       
       - echo "Nueva imagen detectada -> $IMAGE_URI"
 
