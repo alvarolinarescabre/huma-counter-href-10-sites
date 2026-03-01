@@ -2,10 +2,8 @@ version: 0.2
 
 env:
   variables:
-    # Si aplicación y manifiestos están en el mismo repo, solo necesitamos definirlo una vez
     GITOPS_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
     ARGOCD_PUSH_BRANCH: "main"
-    GITHUB_TOKEN: "arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP"
 
 phases:
   install:
@@ -17,9 +15,11 @@ phases:
 
   build:
     commands:
+      - echo "Obteniendo token de GitHub desde Secrets Manager..."
+      - TOKEN_VALUE=$(aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text | jq -r '.github_token' || aws secretsmanager get-secret-value --secret-id arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP --query SecretString --output text)
+
       - echo "Buscando imagedefinitions.json..."
-      - IMG_PATH=$(find /codebuild/output . -maxdepth 6 -type f -name imagedefinitions.json -print -quit 2>/dev/null)
-      
+      - IMG_PATH=$(find . -maxdepth 6 -type f -name imagedefinitions.json -print -quit 2>/dev/null)
       - |
         if [ -z "$IMG_PATH" ]; then
           echo "Error: imagedefinitions.json no encontrado."
@@ -29,14 +29,13 @@ phases:
       - echo "Leyendo imagedefinitions.json desde $IMG_PATH"
       - IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH")
       - |
-        IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
-      - IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
+        IMAGE_TAG=$(echo "$IMAGE_URI" | cut -d':' -f2)
+      - IMAGE_NAME=$(echo "$IMAGE_URI" | cut -d':' -f1)
       
       - echo "Nueva imagen detectada -> $IMAGE_URI"
 
       - echo "Clonando repositorio GitOps..."
-      # Usamos el token si existe para autenticación HTTPS
-      - REPO_URL="https://${GITHUB_TOKEN}@github.com/${GITOPS_REPO}.git"
+      - REPO_URL="https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git"
       - git clone "$REPO_URL" gitops_repo
       - cd gitops_repo
 
@@ -49,11 +48,10 @@ phases:
       
       - cd "$TARGET_DIR"
       - echo "Actualizando kustomization.yaml con la nueva imagen usando Kustomize..."
+      # Kustomize edit set image expects 'name=newImage:tag' or 'name:tag'
+      # Since IMAGE_NAME contains the full ECR repo path, we use it as the match key.
+      - kustomize edit set image "${IMAGE_NAME}=${IMAGE_URI}"
       
-      # kustomize edit set image busca la imagen existente (IMAGE_NAME) y le asigna el nuevo URI/Tag
-      - kustomize edit set image ${IMAGE_NAME}=${IMAGE_URI}
-      
-      # Regresamos a la raíz del repo clonado
       - cd ../../../
 
       - echo "Configurando Git..."
@@ -70,6 +68,4 @@ phases:
         
       - echo "Haciendo commit y push de los cambios..."
       - git commit -m "GitOps: actualización automática de imagen a ${IMAGE_TAG}"
-      
-      # Si falla el push (ej. conflicto), el pipeline fallará y serás notificado.
       - git push origin HEAD:${ARGOCD_PUSH_BRANCH}
