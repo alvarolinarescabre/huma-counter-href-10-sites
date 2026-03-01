@@ -216,6 +216,10 @@ resource "aws_codebuild_project" "app_build" {
       name  = "AWS_DEFAULT_REGION"
       value = var.region
     }
+    environment_variable {
+      name  = "GITHUB_TOKEN_SECRET_ARN"
+      value = aws_secretsmanager_secret.app_deploy_github_token.arn
+    }
   }
 
   artifacts {
