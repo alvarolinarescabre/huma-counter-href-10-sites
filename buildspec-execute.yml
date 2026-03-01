@@ -72,8 +72,8 @@ phases:
         KUSTOMIZATION="$TARGET_DIR/kustomization.yaml"
         if [ -f "$KUSTOMIZATION" ]; then
           echo "Updating kustomization with image name and tag"
-          sed -i "s|name: .*|name: $IMAGE_NAME|" "$KUSTOMIZATION" || true
-          sed -i "s|newTag: .*|newTag: $IMAGE_TAG|" "$KUSTOMIZATION" || true
+          sed -i "s|^\s*name:.*|  name: $IMAGE_NAME|" "$KUSTOMIZATION" || true
+          sed -i "s|^\s*newTag:.*|    newTag: $IMAGE_TAG|" "$KUSTOMIZATION" || true
         fi
 
         cd argocd_repo
