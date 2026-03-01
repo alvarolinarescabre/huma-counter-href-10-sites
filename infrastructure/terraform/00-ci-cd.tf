@@ -326,6 +326,10 @@ resource "aws_codepipeline" "app" {
         branches {
           includes = ["main"]
         }
+        file_paths {
+          includes = ["app/**", "pipeline/**"]
+          excludes = ["gitops/**"]
+        }
       }
     }
   }
