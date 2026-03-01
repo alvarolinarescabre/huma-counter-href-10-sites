@@ -13,7 +13,9 @@ locals {
   cluster_name    = "${local.name}-cluster"
   cluster_version = "1.35"
 
-  # SSO Information
-  identity_store_id = tolist(data.aws_ssoadmin_instances.this.identity_store_ids)[0]
-  sso_instance_arn  = tolist(data.aws_ssoadmin_instances.this.arns)[0]
+  tags = {
+    Environment = "Development"
+    Terraform   = "true"
+    Project     = "Chamo"
+  }
 }

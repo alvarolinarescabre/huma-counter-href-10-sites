@@ -47,26 +47,14 @@ variable "app_github_repo" {
 
 ## Removed `github_token` variable - repository is public and no token is required
 
-variable "argocd_manifests_repo" {
-  description = "GitHub repository for ArgoCD K8s manifests (owner/repo)"
-  type        = string
-  default     = "alvarolinarescabre/huma-counter-href-10-sites"
-}
-
 variable "argocd_role_arn" {
   description = "(Optional) IAM role ARN created by argocd_capability module to grant EKS access to ArgoCD"
   type        = string
   default     = ""
 }
 
-variable "deploy_buildspec_name" {
-  description = "Optional buildspec filename for the deploy CodeBuild project; if empty the project will use default buildspec.yml from source."
-  type        = string
-  default     = ""
-}
-
 variable "app_deploy_github_token" {
-  description = "(Optional) GitHub token used by the deploy CodeBuild to push ArgoCD manifest updates. If provided, Terraform will store it in Secrets Manager via a secret version."
+  description = "(Optional) GitHub token used by CodeBuild to push GitOps Helm values updates. If provided, Terraform will store it in Secrets Manager."
   type        = string
   default     = ""
   sensitive   = true
