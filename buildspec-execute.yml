@@ -37,6 +37,7 @@ phases:
       - ls -la
 
       - TARGET_DIR="infraestructure/k8s/base"
+      - cd $TARGET_DIR
       - |
         if [ ! -d "$TARGET_DIR" ]; then
           echo "Error: El directorio $TARGET_DIR no existe en el repositorio."
