@@ -2,97 +2,76 @@ version: 0.2
 
 env:
   variables:
-    ARGOCD_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
-    ARGOCD_APP_NAME: "huma-counter-href-10-sites"
+    # Si aplicación y manifiestos están en el mismo repo, solo necesitamos definirlo una vez
+    GITOPS_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
     ARGOCD_PUSH_BRANCH: "main"
-    APP_GITHUB_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
+  # Es muy recomendable pasar GITHUB_TOKEN a través de AWS Secrets Manager
+  # secrets-manager:
+  #   GITHUB_TOKEN: "arn:aws:secretsmanager:region:account:secret:my-github-token:token"
 
 phases:
   install:
     commands:
-      - echo Installing dependencies...
-      - yum install -y git jq || apt-get update && apt-get install -y git jq || true
+      - echo "Instalando dependencias (jq, git y kustomize)..."
+      - apt-get update && apt-get install -y git jq
+      - curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+      - mv kustomize /usr/local/bin/
+
   build:
     commands:
+      - echo "Buscando imagedefinitions.json..."
+      - IMG_PATH=$(find /codebuild/output . -maxdepth 6 -type f -name imagedefinitions.json -print -quit 2>/dev/null)
+      
       - |
-        echo Reading imagedefinitions.json
-        # Locate imagedefinitions.json produced by the build stage. It may be placed
-        # in a secondary artifact path under /codebuild/output/src*/src/s3/... or
-        # in the working dir. Search common locations.
-        IMG_PATH=$(find /codebuild/output -maxdepth 5 -type f -name imagedefinitions.json -print -quit 2>/dev/null || true)
         if [ -z "$IMG_PATH" ]; then
-          IMG_PATH=$(find . -maxdepth 6 -type f -name imagedefinitions.json -print -quit 2>/dev/null || true)
+          echo "Error: imagedefinitions.json no encontrado."
+          exit 1
         fi
-        if [ -z "$IMG_PATH" ]; then
-          echo "imagedefinitions.json not found"
-          exit 0
-        fi
-        echo "Using imagedefinitions.json at: $IMG_PATH"
-        # Try parsing with jq, but fall back to a regex if jq fails on malformed JSON
-        IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH" 2>/tmp/jqerr || true)
-        if [ -z "$IMAGE_URI" ]; then
-          IMAGE_URI=$(grep -oP '"imageUri"\s*:\s*"\K[^"]+' "$IMG_PATH" | head -n1 || true)
-        fi
-        echo "IMAGE_URI=$IMAGE_URI"
-        IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
-        IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
-        echo "IMAGE_NAME=$IMAGE_NAME IMAGE_TAG=$IMAGE_TAG"
+      
+      - echo "Leyendo imagedefinitions.json desde $IMG_PATH"
+      - IMAGE_URI=$(jq -r '.[0].imageUri' "$IMG_PATH")
+      - IMAGE_TAG=$(echo "$IMAGE_URI" | awk -F: '{print $NF}')
+      # Asume que el nombre base de la imagen en tu kustomization coincide con la parte antes del tag
+      - IMAGE_NAME=$(echo "$IMAGE_URI" | sed 's/:.*$//')
+      
+      - echo "Nueva imagen detectada -> $IMAGE_URI"
 
-        echo "Cloning app repo: $APP_GITHUB_REPO"
-         git clone "https://github.com/$APP_GITHUB_REPO.git" app_src
-        if [ -n "$IMAGE_TAG" ] && [ "$IMAGE_TAG" != "latest" ]; then
-          (cd app_src && git checkout "$IMAGE_TAG" || true)
+      - echo "Clonando repositorio GitOps..."
+      # Usamos el token si existe para autenticación HTTPS
+      - REPO_URL="https://${GITHUB_TOKEN}@github.com/${GITOPS_REPO}.git"
+      - git clone "$REPO_URL" gitops_repo
+      - cd gitops_repo
+
+      - TARGET_DIR="infraestructure/k8s/base"
+      - |
+        if [ ! -d "$TARGET_DIR" ]; then
+          echo "Error: El directorio $TARGET_DIR no existe en el repositorio."
+          exit 1
         fi
+      
+      - cd "$TARGET_DIR"
+      - echo "Actualizando kustomization.yaml con la nueva imagen usando Kustomize..."
+      
+      # kustomize edit set image busca la imagen existente (IMAGE_NAME) y le asigna el nuevo URI/Tag
+      - kustomize edit set image ${IMAGE_NAME}=${IMAGE_URI}
+      
+      # Regresamos a la raíz del repo clonado
+      - cd ../../../
 
-        echo "Cloning ArgoCD manifests repo: $ARGOCD_REPO"
-         git clone "https://github.com/$ARGOCD_REPO.git" argocd_repo
-
-        # Locate k8s manifests in the app repo. Prefer a 'k8s/base' folder but
-        # fall back to any directory containing a kustomization.yaml
-        APP_K8S_DIR=""
-        if [ -d "app_src/k8s/base" ]; then
-          APP_K8S_DIR="app_src/k8s/base"
-        else
-          KUSTOM=$(find app_src -type f -name kustomization.yaml -print -quit 2>/dev/null || true)
-          if [ -n "$KUSTOM" ]; then
-            APP_K8S_DIR=$(dirname "$KUSTOM")
-          fi
-        fi
-
-        TARGET_DIR="argocd_repo/infraestructure/k8s/base"
-        rm -rf "$TARGET_DIR" || true
-        mkdir -p "$TARGET_DIR"
-        echo "Copying k8s manifests from app to ArgoCD repo (source: ${APP_K8S_DIR:-not found})"
-        if [ -n "$APP_K8S_DIR" ]; then
-          cp -r "$APP_K8S_DIR"/* "$TARGET_DIR/" || true
-        else
-          echo "No k8s manifests found in app repo; skipping copy"
-        fi
-
-        KUSTOMIZATION="$TARGET_DIR/kustomization.yaml"
-        if [ -f "$KUSTOMIZATION" ]; then
-          echo "Updating kustomization with image name and tag"
-          sed -i "s|^\s*name:.*|  name: $IMAGE_NAME|" "$KUSTOMIZATION" || true
-          sed -i "s|^\s*newTag:.*|    newTag: $IMAGE_TAG|" "$KUSTOMIZATION" || true
-        fi
-
-        cd argocd_repo
-        git config user.email "codebuild@local"
-        git config user.name "codebuild"
-        git add "infraestructure/k8s" || git add "$TARGET_DIR" || true
+      - echo "Configurando Git..."
+      - git config user.email "codebuild@aws.local"
+      - git config user.name "AWS CodeBuild"
+      
+      - git add "$TARGET_DIR/kustomization.yaml"
+      
+      - |
         if git diff --staged --quiet; then
-          echo "No changes to push"
+          echo "No hay cambios en los manifiestos de Kubernetes. Saliendo..."
           exit 0
         fi
-        git commit -m "argocd-update: update ${ARGOCD_APP_NAME} image to ${IMAGE_TAG}" || true
-        # If a GITHUB_TOKEN is provided in the environment, use it for an
-        # authenticated HTTPS push; otherwise attempt to push using the
-        # existing origin (will fail if write access is required).
-        if [ -n "$GITHUB_TOKEN" ]; then
-          git remote set-url origin "https://$GITHUB_TOKEN@github.com/$ARGOCD_REPO.git"
-        fi
-        git push origin HEAD:${ARGOCD_PUSH_BRANCH:-main} || true
-
-artifacts:
-  files:
-    - '**/*'
+        
+      - echo "Haciendo commit y push de los cambios..."
+      - git commit -m "GitOps: actualización automática de imagen a ${IMAGE_TAG}"
+      
+      # Si falla el push (ej. conflicto), el pipeline fallará y serás notificado.
+      - git push origin HEAD:${ARGOCD_PUSH_BRANCH}
