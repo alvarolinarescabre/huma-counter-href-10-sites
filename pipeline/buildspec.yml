@@ -58,6 +58,7 @@ phases:
 
       - git config user.email "codebuild@aws.local"
       - git config user.name "AWS CodeBuild"
+      - git remote set-url origin "https://${TOKEN_VALUE}@github.com/${GITOPS_REPO}.git"
       - git add "$GITOPS_VALUES_PATH"
       - git commit -m "GitOps - actualización automática de imagen a ${IMAGE_TAG}"
       - git push origin HEAD:${GITOPS_BRANCH}
