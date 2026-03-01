@@ -26,7 +26,7 @@ phases:
       - echo Subiendo la imagen a ECR...
       - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG
       - echo Construcción completada el $(date)
-      - printf '[{\"name\":\"huma-container\",\"imageUri\":\"%s\"}]' $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG > imagedefinitions.json
+      - printf '[{\"name\":\"huma-container\",\"imageUri\":\"%s\"}]' $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO_NAME:$IMAGE_TAG > /codebuild/output/imagedefinitions.json
 
 artifacts:
   files:
