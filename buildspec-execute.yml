@@ -5,9 +5,7 @@ env:
     # Si aplicación y manifiestos están en el mismo repo, solo necesitamos definirlo una vez
     GITOPS_REPO: "alvarolinarescabre/huma-counter-href-10-sites"
     ARGOCD_PUSH_BRANCH: "main"
-  # Es muy recomendable pasar GITHUB_TOKEN a través de AWS Secrets Manager
-  # secrets-manager:
-  #   GITHUB_TOKEN: "arn:aws:secretsmanager:region:account:secret:my-github-token:token"
+    GITHUB_TOKEN: "arn:aws:secretsmanager:eu-west-1:312910855403:secret:eks-argocd-app-deploy-github-token-OwVLLP"
 
 phases:
   install:
